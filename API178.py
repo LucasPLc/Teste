@@ -237,7 +237,7 @@ async def mcp_metadata():
     tools = await mcp.list_tools()
     return {"tools": tools}
 
-# --- Inicialização FastAPI ---
+# --- Inicialização do MCP ---
 if __name__ == "__main__":
     os.makedirs(RELATORIOS_DIR, exist_ok=True)
-    uvicorn.run(app, host="0.0.0.0", port=8500)
+    mcp.run(transport='stdio')
