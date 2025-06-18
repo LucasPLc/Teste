@@ -1,2 +1,4 @@
 httpx
 modelcontextprotocol
+fastapi
+uvicorn
