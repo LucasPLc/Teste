@@ -4,10 +4,7 @@ import logging
 import sys
 import json
 from typing import Optional
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from mcp.server.fastmcp import FastMCP
-import uvicorn
 
 # --- Logging ---
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -23,6 +20,15 @@ USER_AGENT = "mcp-rotina178-server/1.0"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RELATORIOS_DIR = os.path.join(SCRIPT_DIR, "relatorios_json")
 
+# --- MCP Setup ---
+try:
+    mcp = FastMCP("saam_rotina178")
+    logger.info("Servidor MCP da Rotina 1.7.8 inicializado.")
+except Exception as e:
+    logger.exception("Erro ao inicializar FastMCP.")
+    print(f"ERRO ao inicializar FastMCP: {e}", file=sys.stderr)
+    raise
+
 # --- Utilitário de request HTTP ---
 async def api_request(method, endpoint, **kwargs):
     url = f"{API_BASE_URL}{endpoint}"
@@ -33,25 +39,7 @@ async def api_request(method, endpoint, **kwargs):
         response = await client.request(method, url, headers=headers, **kwargs)
     return response
 
-# --- FastAPI + MCP Setup ---
-app = FastAPI(title="MCP SAAM Rotina 1.7.8")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-try:
-    mcp = FastMCP("saam_rotina178")
-    logger.info("Servidor MCP da Rotina 1.7.8 HTTP inicializado.")
-except Exception as e:
-    logger.exception("Erro ao inicializar FastMCP.")
-    print(f"ERRO ao inicializar FastMCP: {e}", file=sys.stderr)
-    raise
-
-# --- Ajuda geral ---
+# --- Tools MCP ---
 @mcp.tool()
 async def instrucoes_gerais() -> str:
     """
@@ -215,27 +203,6 @@ async def extrair_todos_jsons(offset: int = 0, limite: int = 100_000) -> str:
     fim = min(offset + limite, total_len)
     info = f"[Trecho extraído de {offset} até {fim} de {total_len} caracteres.]\n\n"
     return info + result
-
-# --- Rotas MCP para DeepAgent/externo ---
-@app.post("/mcp/v1/execute")
-async def mcp_execute(request: Request):
-    data = await request.json()
-    tool_name = data.get("tool")
-    parameters = data.get("parameters", {})
-    available_tools_list = await mcp.list_tools()
-    available_tools = {tool["name"]: tool for tool in available_tools_list}
-    if tool_name not in available_tools:
-        return {
-            "error": f"Tool '{tool_name}' not found.",
-            "available_tools": list(available_tools.keys())
-        }
-    result = await mcp.execute_tool(tool_name, **parameters)
-    return {"result": result}
-
-@app.get("/mcp/v1/metadata")
-async def mcp_metadata():
-    tools = await mcp.list_tools()
-    return {"tools": tools}
 
 # --- Inicialização do MCP ---
 if __name__ == "__main__":
