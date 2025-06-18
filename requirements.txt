@@ -1,4 +1,0 @@
-httpx
-modelcontextprotocol
-fastapi
-uvicorn
