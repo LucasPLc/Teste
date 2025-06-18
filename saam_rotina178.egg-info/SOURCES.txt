@@ -1,0 +1,9 @@
+pyproject.toml
+saam_rotina178/__init__.py
+saam_rotina178/server.py
+saam_rotina178.egg-info/PKG-INFO
+saam_rotina178.egg-info/SOURCES.txt
+saam_rotina178.egg-info/dependency_links.txt
+saam_rotina178.egg-info/entry_points.txt
+saam_rotina178.egg-info/requires.txt
+saam_rotina178.egg-info/top_level.txt
