@@ -1,3 +1,4 @@
+
 import os
 import httpx
 import logging
@@ -20,15 +21,6 @@ USER_AGENT = "mcp-rotina178-server/1.0"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RELATORIOS_DIR = os.path.join(SCRIPT_DIR, "relatorios_json")
 
-# --- MCP Setup ---
-try:
-    mcp = FastMCP("saam_rotina178")
-    logger.info("Servidor MCP da Rotina 1.7.8 inicializado.")
-except Exception as e:
-    logger.exception("Erro ao inicializar FastMCP.")
-    print(f"ERRO ao inicializar FastMCP: {e}", file=sys.stderr)
-    raise
-
 # --- Utilitário de request HTTP ---
 async def api_request(method, endpoint, **kwargs):
     url = f"{API_BASE_URL}{endpoint}"
@@ -39,12 +31,18 @@ async def api_request(method, endpoint, **kwargs):
         response = await client.request(method, url, headers=headers, **kwargs)
     return response
 
-# --- Tools MCP ---
+# --- MCP Server ---
+try:
+    mcp = FastMCP("saam_rotina178")
+    logger.info("Servidor MCP da Rotina 1.7.8 inicializado.")
+except Exception as e:
+    logger.exception("Erro ao inicializar FastMCP.")
+    print(f"ERRO ao inicializar FastMCP: {e}", file=sys.stderr)
+    raise
+
+# --- Ajuda geral ---
 @mcp.tool()
 async def instrucoes_gerais() -> str:
-    """
-    Mostra o fluxo de uso dos relatórios fiscais da Rotina 1.7.8 do SAAM.
-    """
     return (
         "Você é um agente especialista em relatórios fiscais da Rotina 1.7.8 do SAAM.\n"
         "Fluxo atualizado para JSON:\n"
@@ -54,9 +52,9 @@ async def instrucoes_gerais() -> str:
         "Os arquivos JSON podem ser baixados ou analisados pelo próprio agente via `extrair_todos_jsons`, respeitando o limite máximo por chamada."
     )
 
+# --- Métodos de listagem para opções da IA ---
 @mcp.tool()
 async def listar_periodos() -> str:
-    """Lista os períodos disponíveis para consulta."""
     resp = await api_request("GET", "/periodos/disponiveis")
     logger.info(f"Resposta /periodos/disponiveis: {resp.text}")
     if resp.status_code == 200:
@@ -67,7 +65,6 @@ async def listar_periodos() -> str:
 
 @mcp.tool()
 async def listar_tipos_emissao() -> str:
-    """Lista os tipos de emissão disponíveis."""
     resp = await api_request("GET", "/tipos/emissao")
     logger.info(f"Resposta /tipos/emissao: {resp.text}")
     if resp.status_code == 200:
@@ -78,7 +75,6 @@ async def listar_tipos_emissao() -> str:
 
 @mcp.tool()
 async def listar_tipos_operacao() -> str:
-    """Lista os tipos de operação disponíveis."""
     resp = await api_request("GET", "/tipos/operacao")
     logger.info(f"Resposta /tipos/operacao: {resp.text}")
     if resp.status_code == 200:
@@ -89,7 +85,6 @@ async def listar_tipos_operacao() -> str:
 
 @mcp.tool()
 async def listar_abas() -> str:
-    """Lista as abas disponíveis."""
     resp = await api_request("GET", "/tipos/abas")
     logger.info(f"Resposta /tipos/abas: {resp.text}")
     if resp.status_code == 200:
@@ -98,6 +93,7 @@ async def listar_abas() -> str:
         return "Abas disponíveis:\n" + texto
     return f"Erro ao listar abas: {resp.status_code} - {resp.text}"
 
+# --- Geração do relatório em 3 arquivos JSON para cada tabela ---
 @mcp.tool()
 async def gerar_relatorio_json(
     tabela: str,
@@ -107,7 +103,6 @@ async def gerar_relatorio_json(
     tipo_operacao: Optional[str] = None,
     aba: Optional[str] = None
 ) -> str:
-    """Gera relatórios em JSON e divide em 3 arquivos."""
     try:
         payload = {"periodoInicial": periodo_inicial}
         if periodo_final: payload["periodoFinal"] = periodo_final
@@ -119,7 +114,7 @@ async def gerar_relatorio_json(
         base_name = f"{tabela}_{periodo_inicial}_{periodo_final or ''}_{tipo_emissao or ''}_{tipo_operacao or ''}_{aba or ''}".replace("/", "-")
 
         try:
-            endpoint = f"/relatorio/buscar/{tabela.lower()}"
+            endpoint = f"/relatorio/buscar/{tabela.lower()}"  # Ex: /relatorio/buscar/relatorio_notas_c100
             resp = await api_request("POST", endpoint, json=payload, timeout=180.0)
         except httpx.TimeoutException:
             logger.error(f"Timeout ao buscar dados para {tabela}.")
@@ -176,6 +171,7 @@ async def gerar_relatorio_json(
         logger.exception("Erro fatal inesperado na geração de relatório.")
         return f"Erro fatal inesperado: {e}"
 
+# --- Extrai texto de todos JSONs gerados (com paginação) ---
 @mcp.tool()
 async def extrair_todos_jsons(offset: int = 0, limite: int = 100_000) -> str:
     """
@@ -208,3 +204,6 @@ async def extrair_todos_jsons(offset: int = 0, limite: int = 100_000) -> str:
 if __name__ == "__main__":
     os.makedirs(RELATORIOS_DIR, exist_ok=True)
     mcp.run(transport='stdio')
+
+
+
