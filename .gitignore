@@ -1,0 +1,41 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuições e pacotes
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+
+# Logs e cobertura
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.coverage*
+.cache/
+.pytest_cache/
+.tox/
+
+# Ambientes virtuais
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# IDEs / Editores
+.vscode/
+.idea/
+
+# Notebooks Jupyter
+.ipynb_checkpoints/
+
+# Arquivos OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+{
+  "name": "saam-rotina178",
+  "version": "0.1.0",
+  "description": "Servidor MCP da Rotina 1.7.8 (SAAM) – wrapper Python para npx",
+  "bin": { "saam-rotina178": "bin/cli.js" },
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}
