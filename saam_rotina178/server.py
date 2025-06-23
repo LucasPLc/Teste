@@ -3,6 +3,7 @@ import httpx
 import logging
 import sys
 import json
+import requests  # NOVO: Para auto-registro
 from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
@@ -15,10 +16,37 @@ file_handler = logging.FileHandler(log_file, encoding='utf-8')
 file_handler.setFormatter(log_formatter)
 logger.addHandler(file_handler)
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8080/api")
+API_BASE_URL = os.environ.get("API_BASE_URL", "")
 USER_AGENT = "mcp-rotina178-server/1.0"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RELATORIOS_DIR = os.path.join(SCRIPT_DIR, "relatorios_json")
+
+# --- AUTO-REGISTRO NO MCP MANAGER ---
+def _autoregister():
+    """
+    Envia POST /startServer para registrar o servidor com o MCP Manager.
+    Não para a execução em caso de falha.
+    """
+    manager_url = os.getenv("MCP_MANAGER_URL", "http://localhost:8000")
+    url = f"{manager_url}/startServer"
+
+    this_python = sys.executable
+    cwd = SCRIPT_DIR
+
+    config = {
+        "name": "saam_rotina178",
+        "command": this_python,
+        "args": [os.path.join(cwd, "server.py")],
+        "cwd": cwd,
+        "env": {"API_BASE_URL": API_BASE_URL}
+    }
+
+    try:
+        r = requests.post(url, json={"config": config, "timeout": 30}, timeout=5)
+        r.raise_for_status()
+        logger.info("✅ Auto-registro concluído (%s).", r.json())
+    except Exception as exc:
+        logger.warning("⚠️  Falhou ao registrar no MCP: %s", exc)
 
 # --- Utilitário de request HTTP ---
 async def api_request(method, endpoint, **kwargs):
@@ -103,7 +131,6 @@ async def gerar_relatorio_json(
     aba: Optional[str] = None
 ) -> str:
     try:
-        # Monta payload com filtros, incluindo aba que define a tabela lógica
         payload = {"periodoInicial": periodo_inicial}
         if periodo_final:
             payload["periodoFinal"] = periodo_final
@@ -118,7 +145,6 @@ async def gerar_relatorio_json(
         base_name = f"{tabela}_{periodo_inicial}_{periodo_final or ''}_{tipo_emissao or ''}_{tipo_operacao or ''}_{aba or ''}".replace("/", "-")
 
         try:
-            # Endpoint fixo, sem tabela na URL
             endpoint = "/relatorio/buscar"
             resp = await api_request("POST", endpoint, json=payload, timeout=180.0)
         except httpx.TimeoutException:
@@ -176,7 +202,6 @@ async def gerar_relatorio_json(
         logger.exception("Erro fatal inesperado na geração de relatório.")
         return f"Erro fatal inesperado: {e}"
 
-
 # --- Extrai texto de todos JSONs gerados (com paginação) ---
 @mcp.tool()
 async def extrair_todos_jsons(offset: int = 0, limite: int = 100_000) -> str:
@@ -208,11 +233,8 @@ async def extrair_todos_jsons(offset: int = 0, limite: int = 100_000) -> str:
 
 def main():
     os.makedirs(RELATORIOS_DIR, exist_ok=True)
+    _autoregister()  # <<--- CHAMA O AUTO-REGISTRO ANTES DO MCP STDIO
     mcp.run(transport='stdio')
 
 if __name__ == "__main__":
     main()
-
-
-
-
