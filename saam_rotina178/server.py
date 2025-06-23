@@ -103,17 +103,23 @@ async def gerar_relatorio_json(
     aba: Optional[str] = None
 ) -> str:
     try:
+        # Monta payload com filtros, incluindo aba que define a tabela lógica
         payload = {"periodoInicial": periodo_inicial}
-        if periodo_final: payload["periodoFinal"] = periodo_final
-        if tipo_emissao: payload["tipoEmissao"] = tipo_emissao
-        if tipo_operacao: payload["tipoOperacao"] = tipo_operacao
-        if aba: payload["aba"] = aba
+        if periodo_final:
+            payload["periodoFinal"] = periodo_final
+        if tipo_emissao:
+            payload["tipoEmissao"] = tipo_emissao
+        if tipo_operacao:
+            payload["tipoOperacao"] = tipo_operacao
+        if aba:
+            payload["aba"] = aba.lower()
 
         os.makedirs(RELATORIOS_DIR, exist_ok=True)
         base_name = f"{tabela}_{periodo_inicial}_{periodo_final or ''}_{tipo_emissao or ''}_{tipo_operacao or ''}_{aba or ''}".replace("/", "-")
 
         try:
-            endpoint = f"/relatorio/buscar/{tabela.lower()}"  # Ex: /relatorio/buscar/relatorio_notas_c100
+            # Endpoint fixo, sem tabela na URL
+            endpoint = "/relatorio/buscar"
             resp = await api_request("POST", endpoint, json=payload, timeout=180.0)
         except httpx.TimeoutException:
             logger.error(f"Timeout ao buscar dados para {tabela}.")
@@ -169,6 +175,7 @@ async def gerar_relatorio_json(
     except Exception as e:
         logger.exception("Erro fatal inesperado na geração de relatório.")
         return f"Erro fatal inesperado: {e}"
+
 
 # --- Extrai texto de todos JSONs gerados (com paginação) ---
 @mcp.tool()
