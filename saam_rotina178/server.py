@@ -60,7 +60,7 @@ async def api_request(method, endpoint, **kwargs):
 
 # --- MCP Server ---
 try:
-    mcp = FastMCP("saam_rotina178")
+    mcp = FastMCP("saam-rotina178")
     logger.info("Servidor MCP da Rotina 1.7.8 inicializado.")
 except Exception as e:
     logger.exception("Erro ao inicializar FastMCP.")
